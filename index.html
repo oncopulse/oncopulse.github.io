@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script data-goatcounter="https://oncopulse.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <style>
   :root{
     --ink:#0E2A3D;
@@ -331,6 +332,12 @@
       <input type="tel" id="phone" placeholder="+380 XX XXX XX XX">
       <div class="hint">Використовується лише для надсилання щоденних сповіщень у Telegram.</div>
     </div>
+    <!-- Honeypot field: invisible to real people, but automated bots that blindly
+         fill every field on a page will fill this in — giving them away. -->
+    <div style="position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
+      <label for="website">Website</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
     <div class="error-msg" id="error-1">Будь ласка, заповніть усі поля.</div>
 
     <button class="btn-primary" onclick="goToStep2()">Продовжити →</button>
@@ -363,7 +370,10 @@
       <div class="chip" data-value="prostate">Простати</div>
       <div class="chip" data-value="cervical">Шийки матки</div>
     </div>
+
+    <div class="g-recaptcha" data-sitekey="6Le2zZgtAAAAAHbYMCEhHaw3RVU-O2bAOE_wHjys" style="margin-bottom:24px;"></div>
     <div class="error-msg" id="error-2">Оберіть хоча б одну спеціальність і один тип раку.</div>
+    <div class="error-msg" id="error-captcha">Будь ласка, підтвердіть, що ви не робот.</div>
 
     <div class="btn-row">
       <button class="btn-primary" onclick="enterPlatform()">Увійти на платформу →</button>
@@ -494,7 +504,17 @@ function goToStep2(){
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim();
   const phone = document.getElementById('phone').value.trim();
+  const honeypot = document.getElementById('website').value.trim();
   const err = document.getElementById('error-1');
+
+  // Bot check: a real person never sees or fills this field. If it has
+  // anything in it, silently pretend to succeed instead of telling the
+  // bot what tripped it — but don't actually submit anything.
+  if(honeypot !== ''){
+    console.log('Submission blocked: honeypot field was filled (likely a bot).');
+    return;
+  }
+
   if(!name || !email || !phone){ err.style.display='block'; return; }
   err.style.display='none';
   document.getElementById('screen-1').classList.remove('active');
@@ -502,8 +522,20 @@ function goToStep2(){
 }
 function enterPlatform(){
   const err = document.getElementById('error-2');
+  const captchaErr = document.getElementById('error-captcha');
   if(selectedSpecs.size===0 || selectedTypes.size===0){ err.style.display='block'; return; }
   err.style.display='none';
+
+  // Require the reCAPTCHA checkbox to be completed before submitting.
+  // Note: this is a client-side check only, since this site has no backend
+  // server to verify the token cryptographically. It stops generic bots
+  // (the realistic threat right now) but is not bulletproof against a
+  // determined, targeted attacker — that would need a real backend.
+  if(typeof grecaptcha !== 'undefined'){
+    const captchaResponse = grecaptcha.getResponse();
+    if(!captchaResponse){ captchaErr.style.display='block'; return; }
+  }
+  captchaErr.style.display='none';
 
   const name = document.getElementById('name').value.trim() || 'Лікар(ка)';
   const email = document.getElementById('email').value.trim();

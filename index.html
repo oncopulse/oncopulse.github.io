@@ -267,6 +267,16 @@
     text-transform:uppercase; color:var(--muted); padding-top:2px;
   }
   .evidence-grid dd{ margin:0; color:var(--charcoal); line-height:1.5; }
+  .card-details{ display:none; }
+  .card-details.expanded{ display:block; }
+  .expand-toggle{
+    display:inline-flex; align-items:center; gap:6px;
+    background:none; border:none; color:var(--pulse); font-weight:600;
+    font-size:13px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer;
+    padding:6px 0; margin-top:2px;
+  }
+  .expand-toggle .arrow{ transition:transform .15s ease; font-size:11px; }
+  .expand-toggle.expanded .arrow{ transform:rotate(180deg); }
   .pub-link{
     display:inline-flex; align-items:center; gap:6px;
     font-size:13px; font-weight:600; color:var(--pulse); text-decoration:none;
@@ -436,6 +446,7 @@
       <p class="page-sub">Реальні публікації з PubMed за останні 12 місяців · <span class="mono" id="pub-count"></span></p>
 
       <div class="filter-bar" id="research-filters"></div>
+      <div class="filter-bar" id="study-type-filters" style="margin-top:-14px;"></div>
       <div id="pub-list"></div>
     </div>
   </div>
@@ -585,6 +596,8 @@ function showTab(tab){
 
 const specLabels = {radiation:'Радіаційна онкологія', chemo:'Хіміотерапія', surgical:'Хірургічна онкологія', immuno:'Імунотерапія'};
 const typeLabels = {breast:'Молочної залози', lung:'Легень', colorectal:'Товстої кишки', prostate:'Простати', cervical:'Шийки матки'};
+const studyTypeLabels = {rct:'РКД', meta:'Мета-аналіз', systematic:'Систематичний огляд', guideline:'Клінічна настанова', clinical_trial:'Клінічне дослідження'};
+let activeStudyTypeFilter = null;
 
 // Real publications, pulled from the actual 8,243-record database (Aug 2026 snapshot), hand-translated.
 // Each includes a "table" (real extracted numbers) when the source reports clean statistics;
@@ -595,7 +608,7 @@ const typeLabels = {breast:'Молочної залози', lung:'Легень',
 // data.json, which export_for_web.py regenerates from real translations.
 const curatedPublications = [
   {
-    pmid:'42456640', date:'2026-09', spec:'surgical', type:'lung',
+    pmid:'42456640', date:'2026-09', spec:'surgical', type:'lung', studyTypes:['meta'],
     title:'Робот-асистована проти відеоасистованої торакоскопічної сегментектомії при ранньому НДРЛ',
     meta:'Порівняти периопераційні та онкологічні результати робот-асистованої (RATS) та відеоасистованої торакоскопічної (VATS) сегментектомії при ранній стадії недрібноклітинного раку легені (НДРЛ).',
     design:'Мета-аналіз досліджень з підбором пар за схожими характеристиками (propensity-matching).',
@@ -613,7 +626,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42456525', date:'2026-09', spec:'radiation', type:'lung',
+    pmid:'42456525', date:'2026-09', spec:'radiation', type:'lung', studyTypes:['rct'],
     title:'Одночасний інтегрований буст при хіміопроменевій терапії неоперабельного НДРЛ III стадії',
     meta:'Оцінити, чи покращує підвищення дози опромінення пухлини (SIB) виживаність при місцево-поширеному НДРЛ III стадії.',
     design:'Проспективне, одноцентрове, рандомізоване дослідження II фази.',
@@ -630,7 +643,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42633754', date:'2026-09', spec:'radiation', type:'colorectal',
+    pmid:'42633754', date:'2026-09', spec:'radiation', type:'colorectal', studyTypes:['rct'],
     title:'Хіміопроменева терапія проти короткого курсу променевої терапії для збереження органу (STAR-TREC)',
     meta:'Порівняти довгий курс хіміопроменевої терапії (LCCRT) і короткий курс променевої терапії (SCRT) для збереження органу при ранньому раку прямої кишки.',
     design:'Міжнародне, багатоцентрове, рандомізоване дослідження II/III фази.',
@@ -647,7 +660,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42425127', date:'2026-09', spec:'chemo', type:'colorectal',
+    pmid:'42425127', date:'2026-09', spec:'chemo', type:'colorectal', studyTypes:['rct'],
     title:'Аспірин для профілактики раку у носіїв синдрому Лінча (дослідження CaPP3)',
     meta:'Оцінити, чи є нижчі дози аспірину (100 мг або 300 мг) не гіршими за стандартну дозу 600 мг для профілактики раку при синдромі Лінча.',
     design:'Багатоцентрове, рандомізоване, подвійне сліпе дослідження не меншої ефективності.',
@@ -665,7 +678,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42364308', date:'2026-09', spec:'surgical', type:'prostate',
+    pmid:'42364308', date:'2026-09', spec:'surgical', type:'prostate', studyTypes:['systematic','meta'],
     title:'Субкапсулярна проти тотальної орхіектомії при поширеному раку простати',
     meta:'Порівняти клінічні результати та результати, повідомлені пацієнтами, між субкапсулярною і тотальною орхіектомією.',
     design:'Систематичний огляд і мета-аналіз (PubMed, Scopus, Cochrane Library до липня 2025).',
@@ -683,7 +696,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42471290', date:'2026-09', spec:'chemo', type:'prostate',
+    pmid:'42471290', date:'2026-09', spec:'chemo', type:'prostate', studyTypes:['systematic'],
     title:'Радіолігандна терапія лютецієм-177-ПСМА при метастатичному гормоночутливому раку простати',
     meta:'Узагальнити дані про ефективність, безпеку та комбіновані стратегії застосування \u00b9\u2077\u2077Lu-ПСМА-терапії.',
     design:'Систематичний огляд (PubMed, Embase, ClinicalTrials.gov, WHO ICTRP, 2010\u20132025) за стандартом PRISMA.',
@@ -701,7 +714,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42546669', date:'2026-09', spec:'immuno', type:'cervical',
+    pmid:'42546669', date:'2026-09', spec:'immuno', type:'cervical', studyTypes:['clinical_trial'],
     title:'Ефективність і безпека камрелізумабу з хіміопроменевою терапією при місцево-поширеному раку шийки матки',
     meta:'Оцінити ефективність і безпеку інгібітора контрольних точок імунітету камрелізумабу в поєднанні з хіміопроменевою терапією.',
     design:'Проспективне дослідження II фази, один рукав (без контрольної групи).',
@@ -720,7 +733,7 @@ const curatedPublications = [
     }
   },
   {
-    pmid:'42343867', date:'2026-09', spec:'chemo', type:'cervical',
+    pmid:'42343867', date:'2026-09', spec:'chemo', type:'cervical', studyTypes:['systematic','meta'],
     title:'Штучний інтелект у скринінгу раку шийки матки \u2014 систематичний огляд за клінічною роллю',
     meta:'Визначити, для яких саме клінічних завдань штучний інтелект (ШІ) у скринінгу раку шийки матки вже готовий до практичного застосування.',
     design:'Систематичний огляд і бівaріантний мета-аналіз (97 досліджень, 2019\u20132026; 47 з придатними даними).',
@@ -793,6 +806,22 @@ function renderResearch(){
     bar.appendChild(c);
   });
 
+  // Study type filter row (RCT / Meta-analysis / Systematic review / Guideline / Clinical trial)
+  const studyBar = document.getElementById('study-type-filters');
+  studyBar.innerHTML = '';
+  const allStudyChip = document.createElement('div');
+  allStudyChip.className = 'filter-chip' + (activeStudyTypeFilter===null?' active':'');
+  allStudyChip.textContent = 'Усі типи досліджень';
+  allStudyChip.onclick = ()=>{ activeStudyTypeFilter=null; renderResearch(); };
+  studyBar.appendChild(allStudyChip);
+  Object.keys(studyTypeLabels).forEach(st=>{
+    const c = document.createElement('div');
+    c.className = 'filter-chip' + (activeStudyTypeFilter===st?' active':'');
+    c.textContent = studyTypeLabels[st];
+    c.onclick = ()=>{ activeStudyTypeFilter=st; renderResearch(); };
+    studyBar.appendChild(c);
+  });
+
   if(!dataLoaded){
     list.innerHTML = '<div class="empty-state">Завантаження досліджень...</div>';
     document.getElementById('pub-count').textContent = '';
@@ -803,7 +832,8 @@ function renderResearch(){
     const specOk = selectedSpecs.size===0 || selectedSpecs.has(p.spec);
     const typeOk = selectedTypes.size===0 || selectedTypes.has(p.type);
     const activeOk = currentFilter===null || p.spec===currentFilter;
-    return specOk && typeOk && activeOk;
+    const studyTypeOk = activeStudyTypeFilter===null || (p.studyTypes && p.studyTypes.includes(activeStudyTypeFilter));
+    return specOk && typeOk && activeOk && studyTypeOk;
   });
 
   document.getElementById('pub-count').textContent = filtered.length + ' публікацій';
@@ -827,26 +857,42 @@ function renderResearch(){
       </div>`;
   };
 
-  list.innerHTML = filtered.map(p => `
+  list.innerHTML = filtered.map((p, i) => `
     <div class="pub-card">
       <div class="pub-meta">
         <span class="pub-date">${p.date}</span>
         <span class="tag tag-spec">${specLabels[p.spec]}</span>
         <span class="tag tag-type">${typeLabels[p.type]}</span>
+        ${(p.studyTypes||[]).map(st => `<span class="tag" style="background:var(--amber-light);color:#8A6416;">${studyTypeLabels[st]}</span>`).join('')}
       </div>
       <h3 class="pub-title">${p.title}</h3>
       <dl class="evidence-grid">
         <dt>Мета</dt><dd>${p.meta}</dd>
-        <dt>Дизайн</dt><dd>${p.design}</dd>
-        <dt>Популяція</dt><dd>${p.population}</dd>
-        <dt>Результат</dt><dd>${p.result}</dd>
-        <dt>Що нового</dt><dd>${p.news}</dd>
       </dl>
-      ${renderTable(p.table)}
-      ${p.footnote ? `<div class="table-footnote">${p.footnote}</div>` : ''}
-      <a class="pub-link" href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener" style="margin-top:14px; display:inline-flex;">Оригінал на PubMed (PMID ${p.pmid}) ↗</a>
+      <button class="expand-toggle" id="toggle-${i}" onclick="toggleCard(${i})">
+        <span class="label">Показати деталі</span> <span class="arrow">\u25be</span>
+      </button>
+      <div class="card-details" id="details-${i}">
+        <dl class="evidence-grid" style="margin-top:10px;">
+          <dt>Дизайн</dt><dd>${p.design}</dd>
+          <dt>Популяція</dt><dd>${p.population}</dd>
+          <dt>Результат</dt><dd>${p.result}</dd>
+          <dt>Що нового</dt><dd>${p.news}</dd>
+        </dl>
+        ${renderTable(p.table)}
+        ${p.footnote ? `<div class="table-footnote">${p.footnote}</div>` : ''}
+        <a class="pub-link" href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener" style="margin-top:14px; display:inline-flex;">Оригінал на PubMed (PMID ${p.pmid}) ↗</a>
+      </div>
     </div>
   `).join('');
+}
+
+function toggleCard(i){
+  const details = document.getElementById(`details-${i}`);
+  const toggle = document.getElementById(`toggle-${i}`);
+  const isExpanded = details.classList.toggle('expanded');
+  toggle.classList.toggle('expanded', isExpanded);
+  toggle.querySelector('.label').textContent = isExpanded ? 'Сховати деталі' : 'Показати деталі';
 }
 
 // --- On page load: skip straight to the app if this browser already has a saved profile ---

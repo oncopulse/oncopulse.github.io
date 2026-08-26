@@ -393,6 +393,7 @@
     <div class="user-chip">
       <span id="user-display-name">Лікар(ка)</span>
       <div class="avatar" id="user-avatar">Л</div>
+      <a href="#" onclick="forgetProfile(); return false;" style="color:rgba(255,255,255,0.4); font-size:12px; margin-left:6px;" title="Забути цей профіль на цьому пристрої">Змінити</a>
     </div>
   </div>
 
@@ -443,6 +444,30 @@
 <script>
 let selectedSpecs = new Set();
 let selectedTypes = new Set();
+
+const STORAGE_KEY = 'oncopulse_profile';
+
+function saveProfileLocally(name, email, phone, specs, types){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({name, email, phone, specs, types}));
+  }catch(e){
+    console.log('Could not save profile locally (private browsing mode?):', e);
+  }
+}
+
+function loadProfileLocally(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){
+    return null;
+  }
+}
+
+function forgetProfile(){
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
 
 // --- Google Form wiring (silent background submission) ---
 const GOOGLE_FORM_ID = '1FAIpQLScpUbCXXkm5KsQr2IbWZK_QkbRT8XPlS1IBWbSfCJ-4JsY8DA';
@@ -544,6 +569,7 @@ function enterPlatform(){
   document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
 
   submitRegistrationToGoogleForm(name, email, phone, [...selectedSpecs], [...selectedTypes]);
+  saveProfileLocally(name, email, phone, [...selectedSpecs], [...selectedTypes]);
 
   document.getElementById('screen-2').classList.remove('active');
   document.getElementById('screen-3').classList.add('active');
@@ -906,6 +932,31 @@ function renderResearch(){
     </div>
   `).join('');
 }
+
+// --- On page load: skip straight to the app if this browser already has a saved profile ---
+(function initFromSavedProfile(){
+  const saved = loadProfileLocally();
+  if(!saved) return;
+
+  selectedSpecs = new Set(saved.specs || []);
+  selectedTypes = new Set(saved.types || []);
+
+  // Reflect saved selections visually on step 2 too, in case the user clicks "Змінити"
+  document.querySelectorAll('#spec-chips .chip').forEach(chip=>{
+    if(selectedSpecs.has(chip.dataset.value)) chip.classList.add('selected');
+  });
+  document.querySelectorAll('#type-chips .chip').forEach(chip=>{
+    if(selectedTypes.has(chip.dataset.value)) chip.classList.add('selected');
+  });
+
+  const name = saved.name || 'Лікар(ка)';
+  document.getElementById('user-display-name').textContent = name;
+  document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
+
+  document.getElementById('screen-1').classList.remove('active');
+  document.getElementById('screen-3').classList.add('active');
+  renderResearch();
+})();
 </script>
 </body>
 </html>

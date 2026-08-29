@@ -408,6 +408,13 @@
   </div>
 
   <div class="app-body">
+    <div id="telegram-banner" style="display:none; background:var(--fresh-light); border:1.5px solid var(--fresh); border-radius:12px; padding:16px 20px; margin-bottom:24px; align-items:center; justify-content:space-between; gap:16px;">
+      <div>
+        <strong style="color:#1D7A63;">Підтвердьте Telegram</strong>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:2px;">Щоб отримувати щоденні сповіщення про нові дослідження — це займає 10 секунд.</div>
+      </div>
+      <a id="telegram-confirm-link" href="#" target="_blank" class="btn-primary" style="white-space:nowrap; text-decoration:none;">Підтвердити →</a>
+    </div>
     <!-- Protocols tab -->
     <div id="page-protocols">
       <h1 class="page-title">Протоколи лікування</h1>
@@ -458,9 +465,9 @@ let selectedTypes = new Set();
 
 const STORAGE_KEY = 'oncopulse_profile';
 
-function saveProfileLocally(name, email, phone, specs, types){
+function saveProfileLocally(name, email, phone, specs, types, telegramCode){
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({name, email, phone, specs, types}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({name, email, phone, specs, types, telegramCode}));
   }catch(e){
     console.log('Could not save profile locally (private browsing mode?):', e);
   }
@@ -480,6 +487,14 @@ function forgetProfile(){
   location.reload();
 }
 
+function showTelegramBannerIfNeeded(telegramCode){
+  const banner = document.getElementById('telegram-banner');
+  const link = document.getElementById('telegram-confirm-link');
+  if(!telegramCode){ banner.style.display = 'none'; return; }
+  link.href = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${telegramCode}`;
+  banner.style.display = 'flex';
+}
+
 // --- Google Form wiring (silent background submission) ---
 const GOOGLE_FORM_ID = '1FAIpQLScpUbCXXkm5KsQr2IbWZK_QkbRT8XPlS1IBWbSfCJ-4JsY8DA';
 const GOOGLE_FORM_ENTRIES = {
@@ -488,9 +503,22 @@ const GOOGLE_FORM_ENTRIES = {
   phone: 'entry.624963293',
   specialty: 'entry.1695490899',
   cancerType: 'entry.184047924',
+  telegramCode: 'entry.1147086884',
 };
 
-function submitRegistrationToGoogleForm(name, email, phone, specs, types){
+// Generates a short random code (e.g. "A7X9K2") used as a one-time
+// "claim ticket" linking a website registration to a Telegram chat —
+// see submitRegistrationToGoogleForm and the Telegram confirm banner.
+function generateTelegramCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no O/0/I/1 (easy to misread)
+  let code = '';
+  for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+const TELEGRAM_BOT_USERNAME = 'Pubmed_alerts_bot';
+
+function submitRegistrationToGoogleForm(name, email, phone, specs, types, telegramCode){
   const form = document.createElement('form');
   form.action = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`;
   form.method = 'POST';
@@ -511,6 +539,7 @@ function submitRegistrationToGoogleForm(name, email, phone, specs, types){
   // Checkboxes accept multiple values as repeated fields with the same entry name
   specs.forEach(s => addField(GOOGLE_FORM_ENTRIES.specialty, specLabels[s]));
   types.forEach(t => addField(GOOGLE_FORM_ENTRIES.cancerType, typeLabels[t]));
+  addField(GOOGLE_FORM_ENTRIES.telegramCode, telegramCode);
 
   document.body.appendChild(form);
   form.submit();
@@ -590,11 +619,18 @@ function enterPlatform(){
   document.getElementById('user-display-name').textContent = name;
   document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
 
-  submitRegistrationToGoogleForm(name, email, phone, [...selectedSpecs], [...selectedTypes]);
-  saveProfileLocally(name, email, phone, [...selectedSpecs], [...selectedTypes]);
+  // Reuse the same Telegram code if this browser already has one (e.g. the
+  // doctor is just updating their filters) — generating a new one would
+  // silently break their already-confirmed Telegram link for no reason.
+  const existing = loadProfileLocally();
+  const telegramCode = (existing && existing.telegramCode) ? existing.telegramCode : generateTelegramCode();
+
+  submitRegistrationToGoogleForm(name, email, phone, [...selectedSpecs], [...selectedTypes], telegramCode);
+  saveProfileLocally(name, email, phone, [...selectedSpecs], [...selectedTypes], telegramCode);
 
   document.getElementById('screen-2').classList.remove('active');
   document.getElementById('screen-3').classList.add('active');
+  showTelegramBannerIfNeeded(telegramCode);
   loadRealData();
 }
 
@@ -928,6 +964,7 @@ function toggleCard(i){
 
   document.getElementById('screen-1').classList.remove('active');
   document.getElementById('screen-3').classList.add('active');
+  showTelegramBannerIfNeeded(saved.telegramCode);
   loadRealData();
 })();
 </script>

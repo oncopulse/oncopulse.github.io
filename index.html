@@ -196,6 +196,18 @@
     font-weight:700; font-size:13px;
   }
 
+  @media (max-width: 480px){
+    .app-nav{ flex-wrap:wrap; height:auto; padding:12px 16px; gap:10px; }
+    .app-nav .brand{ order:1; }
+    .user-chip{ order:2; margin-left:auto; }
+    .user-chip #user-display-name{ display:none; }
+    .user-chip button{ font-size:11px; padding:5px 10px; }
+    .tabs{ order:3; width:100%; }
+    .tab-btn{ flex:1; text-align:center; }
+    #telegram-banner{ flex-direction:column; align-items:flex-start !important; }
+    #telegram-confirm-link{ width:100%; justify-content:center; margin-top:4px; }
+  }
+
   .app-body{ max-width:920px; margin:0 auto; padding:40px 24px 100px; }
   .page-title{
     font-size:26px; font-weight:700; color:var(--ink); letter-spacing:-0.01em;

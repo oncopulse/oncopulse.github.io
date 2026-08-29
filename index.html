@@ -551,7 +551,18 @@ function goToStep2(){
     return;
   }
 
-  if(!name || !email || !phone){ err.style.display='block'; return; }
+  if(!name || !email || !phone){ err.style.display='block'; err.textContent='Будь ласка, заповніть усі поля.'; return; }
+
+  // Real email format check — not just "is it non-empty". This matters
+  // because email is the exact key used to match this registration to a
+  // confirmed Telegram chat later — a malformed email breaks that silently.
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailPattern.test(email)){
+    err.textContent = 'Будь ласка, введіть коректну електронну адресу.';
+    err.style.display = 'block';
+    return;
+  }
+
   err.style.display='none';
   document.getElementById('screen-1').classList.remove('active');
   document.getElementById('screen-2').classList.add('active');

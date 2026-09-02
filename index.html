@@ -349,11 +349,6 @@
       <label for="email">Email</label>
       <input type="email" id="email" placeholder="olena@example.com">
     </div>
-    <div class="field">
-      <label for="phone">Номер телефону (для Telegram-бота)</label>
-      <input type="tel" id="phone" placeholder="+380 XX XXX XX XX">
-      <div class="hint">Використовується лише для надсилання щоденних сповіщень у Telegram.</div>
-    </div>
     <!-- Honeypot field: invisible to real people, but automated bots that blindly
          fill every field on a page will fill this in — giving them away. -->
     <div style="position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
@@ -477,9 +472,9 @@ let selectedTypes = new Set();
 
 const STORAGE_KEY = 'oncopulse_profile';
 
-function saveProfileLocally(name, email, phone, specs, types, telegramCode){
+function saveProfileLocally(name, email, specs, types, telegramCode){
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({name, email, phone, specs, types, telegramCode}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({name, email, specs, types, telegramCode}));
   }catch(e){
     console.log('Could not save profile locally (private browsing mode?):', e);
   }
@@ -512,7 +507,6 @@ const GOOGLE_FORM_ID = '1FAIpQLScpUbCXXkm5KsQr2IbWZK_QkbRT8XPlS1IBWbSfCJ-4JsY8DA
 const GOOGLE_FORM_ENTRIES = {
   name: 'entry.489362676',
   email: 'entry.987731097',
-  phone: 'entry.624963293',
   specialty: 'entry.1695490899',
   cancerType: 'entry.184047924',
   telegramCode: 'entry.1147086884',
@@ -530,7 +524,7 @@ function generateTelegramCode(){
 
 const TELEGRAM_BOT_USERNAME = 'Pubmed_alerts_bot';
 
-function submitRegistrationToGoogleForm(name, email, phone, specs, types, telegramCode){
+function submitRegistrationToGoogleForm(name, email, specs, types, telegramCode){
   const form = document.createElement('form');
   form.action = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`;
   form.method = 'POST';
@@ -547,7 +541,6 @@ function submitRegistrationToGoogleForm(name, email, phone, specs, types, telegr
 
   addField(GOOGLE_FORM_ENTRIES.name, name);
   addField(GOOGLE_FORM_ENTRIES.email, email);
-  addField(GOOGLE_FORM_ENTRIES.phone, phone);
   // Checkboxes accept multiple values as repeated fields with the same entry name
   specs.forEach(s => addField(GOOGLE_FORM_ENTRIES.specialty, specLabels[s]));
   types.forEach(t => addField(GOOGLE_FORM_ENTRIES.cancerType, typeLabels[t]));
@@ -580,7 +573,6 @@ function goToStep1(){
 function goToStep2(){
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim();
-  const phone = document.getElementById('phone').value.trim();
   const honeypot = document.getElementById('website').value.trim();
   const err = document.getElementById('error-1');
 
@@ -592,7 +584,7 @@ function goToStep2(){
     return;
   }
 
-  if(!name || !email || !phone){ err.style.display='block'; err.textContent='Будь ласка, заповніть усі поля.'; return; }
+  if(!name || !email){ err.style.display='block'; err.textContent='Будь ласка, заповніть усі поля.'; return; }
 
   // Real email format check — not just "is it non-empty". This matters
   // because email is the exact key used to match this registration to a
@@ -627,7 +619,6 @@ function enterPlatform(){
 
   const name = document.getElementById('name').value.trim() || 'Лікар(ка)';
   const email = document.getElementById('email').value.trim();
-  const phone = document.getElementById('phone').value.trim();
   document.getElementById('user-display-name').textContent = name;
   document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
 
@@ -637,8 +628,8 @@ function enterPlatform(){
   const existing = loadProfileLocally();
   const telegramCode = (existing && existing.telegramCode) ? existing.telegramCode : generateTelegramCode();
 
-  submitRegistrationToGoogleForm(name, email, phone, [...selectedSpecs], [...selectedTypes], telegramCode);
-  saveProfileLocally(name, email, phone, [...selectedSpecs], [...selectedTypes], telegramCode);
+  submitRegistrationToGoogleForm(name, email, [...selectedSpecs], [...selectedTypes], telegramCode);
+  saveProfileLocally(name, email, [...selectedSpecs], [...selectedTypes], telegramCode);
 
   document.getElementById('screen-2').classList.remove('active');
   document.getElementById('screen-3').classList.add('active');

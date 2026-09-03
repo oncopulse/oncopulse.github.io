@@ -379,13 +379,17 @@
     </div>
 
     <div class="group-label">Типи раку, що цікавлять</div>
-    <div class="group-hint">Наразі повна база доступна лише для раку молочної залози — інші типи додаються поступово</div>
+    <div class="group-hint">Глибина бази різна для різних типів — молочної залози наразі найбільш повна, інші поповнюються щодня</div>
     <div class="chip-grid" id="type-chips">
       <div class="chip" data-value="breast">Молочної залози</div>
       <div class="chip" data-value="lung">Легень</div>
       <div class="chip" data-value="colorectal">Товстої кишки</div>
       <div class="chip" data-value="prostate">Простати</div>
       <div class="chip" data-value="cervical">Шийки матки</div>
+      <div class="chip" data-value="nasopharyngeal">Носоглотки</div>
+      <div class="chip" data-value="oropharyngeal">Ротоглотки</div>
+      <div class="chip" data-value="esophageal">Стравоходу</div>
+      <div class="chip" data-value="parotid">Привушної залози</div>
     </div>
 
     <div class="g-recaptcha" data-sitekey="6Le2zZgtAAAAAHbYMCEhHaw3RVU-02bAOE_wHjys" style="margin-bottom:24px;"></div>
@@ -645,7 +649,7 @@ function showTab(tab){
 }
 
 const specLabels = {radiation:'Радіаційна онкологія', chemo:'Хіміотерапія', surgical:'Хірургічна онкологія', immuno:'Імунотерапія'};
-const typeLabels = {breast:'Молочної залози', lung:'Легень', colorectal:'Товстої кишки', prostate:'Простати', cervical:'Шийки матки'};
+const typeLabels = {breast:'Молочної залози', lung:'Легень', colorectal:'Товстої кишки', prostate:'Простати', cervical:'Шийки матки', nasopharyngeal:'Носоглотки', oropharyngeal:'Ротоглотки', esophageal:'Стравоходу', parotid:'Привушної залози'};
 const studyTypeLabels = {rct:'РКД', meta:'Мета-аналіз', systematic:'Систематичний огляд', guideline:'Клінічна настанова', clinical_trial:'Клінічне дослідження'};
 let activeStudyTypeFilter = null;
 

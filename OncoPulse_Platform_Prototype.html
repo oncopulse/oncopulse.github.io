@@ -465,6 +465,7 @@
 
       <div class="filter-bar" id="research-filters"></div>
       <div class="filter-bar" id="study-type-filters" style="margin-top:-14px;"></div>
+      <div class="filter-bar" id="cancer-type-filters" style="margin-top:-14px;"></div>
       <div id="pub-list"></div>
     </div>
   </div>
@@ -652,6 +653,7 @@ const specLabels = {radiation:'Радіаційна онкологія', chemo:'
 const typeLabels = {breast:'Молочної залози', lung:'Легень', colorectal:'Товстої кишки', prostate:'Простати', cervical:'Шийки матки', nasopharyngeal:'Носоглотки', oropharyngeal:'Ротоглотки', esophageal:'Стравоходу', parotid:'Привушної залози'};
 const studyTypeLabels = {rct:'РКД', meta:'Мета-аналіз', systematic:'Систематичний огляд', guideline:'Клінічна настанова', clinical_trial:'Клінічне дослідження'};
 let activeStudyTypeFilter = null;
+let activeCancerTypeFilter = null;
 
 // Real publications, pulled from the actual 8,243-record database (Aug 2026 snapshot), hand-translated.
 // Each includes a "table" (real extracted numbers) when the source reports clean statistics;
@@ -876,6 +878,24 @@ function renderResearch(){
     studyBar.appendChild(c);
   });
 
+  // Cancer type filter row — narrows within whichever types were chosen at
+  // registration, same pattern as the specialty row above.
+  const cancerBar = document.getElementById('cancer-type-filters');
+  cancerBar.innerHTML = '';
+  const typesToShow = selectedTypes.size ? [...selectedTypes] : Object.keys(typeLabels);
+  const allCancerChip = document.createElement('div');
+  allCancerChip.className = 'filter-chip' + (activeCancerTypeFilter===null?' active':'');
+  allCancerChip.textContent = 'Усі типи раку';
+  allCancerChip.onclick = ()=>{ activeCancerTypeFilter=null; renderResearch(); };
+  cancerBar.appendChild(allCancerChip);
+  typesToShow.forEach(t=>{
+    const c = document.createElement('div');
+    c.className = 'filter-chip' + (activeCancerTypeFilter===t?' active':'');
+    c.textContent = typeLabels[t];
+    c.onclick = ()=>{ activeCancerTypeFilter=t; renderResearch(); };
+    cancerBar.appendChild(c);
+  });
+
   if(!dataLoaded){
     list.innerHTML = '<div class="empty-state">Завантаження досліджень...</div>';
     document.getElementById('pub-count').textContent = '';
@@ -887,7 +907,8 @@ function renderResearch(){
     const typeOk = selectedTypes.size===0 || selectedTypes.has(p.type);
     const activeOk = currentFilter===null || p.spec===currentFilter;
     const studyTypeOk = activeStudyTypeFilter===null || (p.studyTypes && p.studyTypes.includes(activeStudyTypeFilter));
-    return specOk && typeOk && activeOk && studyTypeOk;
+    const cancerTypeOk = activeCancerTypeFilter===null || p.type===activeCancerTypeFilter;
+    return specOk && typeOk && activeOk && studyTypeOk && cancerTypeOk;
   });
 
   document.getElementById('pub-count').textContent = filtered.length + ' публікацій';

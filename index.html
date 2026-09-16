@@ -466,6 +466,7 @@
       <div class="filter-bar" id="research-filters"></div>
       <div class="filter-bar" id="study-type-filters" style="margin-top:-14px;"></div>
       <div class="filter-bar" id="cancer-type-filters" style="margin-top:-14px;"></div>
+      <div class="filter-bar" id="journal-filters" style="margin-top:-14px;"></div>
       <div id="pub-list"></div>
     </div>
   </div>
@@ -652,6 +653,8 @@ function showTab(tab){
 const specLabels = {radiation:'Радіаційна онкологія', chemo:'Хіміотерапія', surgical:'Хірургічна онкологія', immuno:'Імунотерапія'};
 const typeLabels = {breast:'Молочної залози', lung:'Легень', colorectal:'Товстої кишки', prostate:'Простати', cervical:'Шийки матки', nasopharyngeal:'Носоглотки', oropharyngeal:'Ротоглотки', esophageal:'Стравоходу', parotid:'Привушної залози'};
 const studyTypeLabels = {rct:'РКД', meta:'Мета-аналіз', systematic:'Систематичний огляд', guideline:'Клінічна настанова', clinical_trial:'Клінічне дослідження'};
+const journalLabels = {jco:'JCO', lancet_oncology:'Lancet Oncology', jama_oncology:'JAMA Oncology', nejm:'NEJM', annals_oncology:'Annals of Oncology', nature_medicine:'Nature Medicine', nature_cancer:'Nature Cancer', clinical_cancer_research:'Clinical Cancer Research', jnci:'JNCI', blood:'Blood', lancet:'The Lancet', jama:'JAMA'};
+let activeJournalFilter = null;
 let activeStudyTypeFilter = null;
 let activeCancerTypeFilter = null;
 
@@ -896,6 +899,29 @@ function renderResearch(){
     cancerBar.appendChild(c);
   });
 
+  // Journal filter row — only shown for journals that actually have at
+  // least one matching publication right now, so doctors never hit an
+  // empty dead-end chip. Most publications have no major-journal tag at
+  // all (not from one of the ~12 flagship journals we track), which is
+  // normal and expected, not a gap.
+  const journalBar = document.getElementById('journal-filters');
+  journalBar.innerHTML = '';
+  const journalsPresent = [...new Set(publications.filter(p=>p.journal).map(p=>p.journal))];
+  if(journalsPresent.length){
+    const allJournalChip = document.createElement('div');
+    allJournalChip.className = 'filter-chip' + (activeJournalFilter===null?' active':'');
+    allJournalChip.textContent = 'Усі журнали';
+    allJournalChip.onclick = ()=>{ activeJournalFilter=null; renderResearch(); };
+    journalBar.appendChild(allJournalChip);
+    journalsPresent.forEach(j=>{
+      const c = document.createElement('div');
+      c.className = 'filter-chip' + (activeJournalFilter===j?' active':'');
+      c.textContent = journalLabels[j] || j;
+      c.onclick = ()=>{ activeJournalFilter=j; renderResearch(); };
+      journalBar.appendChild(c);
+    });
+  }
+
   if(!dataLoaded){
     list.innerHTML = '<div class="empty-state">Завантаження досліджень...</div>';
     document.getElementById('pub-count').textContent = '';
@@ -908,7 +934,8 @@ function renderResearch(){
     const activeOk = currentFilter===null || p.spec===currentFilter;
     const studyTypeOk = activeStudyTypeFilter===null || (p.studyTypes && p.studyTypes.includes(activeStudyTypeFilter));
     const cancerTypeOk = activeCancerTypeFilter===null || p.type===activeCancerTypeFilter;
-    return specOk && typeOk && activeOk && studyTypeOk && cancerTypeOk;
+    const journalOk = activeJournalFilter===null || p.journal===activeJournalFilter;
+    return specOk && typeOk && activeOk && studyTypeOk && cancerTypeOk && journalOk;
   });
 
   document.getElementById('pub-count').textContent = filtered.length + ' публікацій';
@@ -939,6 +966,7 @@ function renderResearch(){
         <span class="tag tag-spec">${specLabels[p.spec]}</span>
         <span class="tag tag-type">${typeLabels[p.type]}</span>
         ${(p.studyTypes||[]).map(st => `<span class="tag" style="background:var(--amber-light);color:#8A6416;">${studyTypeLabels[st]}</span>`).join('')}
+        ${p.journal ? `<span class="tag" style="background:#EDE7F6;color:#5E35B1;">${journalLabels[p.journal] || p.journal}</span>` : ''}
       </div>
       <h3 class="pub-title">${p.title}</h3>
       <dl class="evidence-grid">
